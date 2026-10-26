@@ -76,3 +76,8 @@ alter table public.vehiculos add column if not exists km_prox_mant integer;
 -- 8) Marca separada del modelo en camionetas nuevas creadas desde el check
 alter table public.checks add column if not exists marca text not null default '';
 -- check_actualiza_km() inserta marca = new.marca y modelo = new.vehiculo
+
+-- 9) Mantención por km con un solo dato (26-10-2026)
+-- La app ya no usa km_ultima_mant ni el intervalo para calcular la próxima mantención.
+-- El único dato es vehiculos.km_prox_mant (el del adhesivo): lo actualiza cada check (trigger check_actualiza_km)
+-- o el administrador desde Vehículos; manda el más reciente. km_ultima_mant queda en la tabla solo como histórico.

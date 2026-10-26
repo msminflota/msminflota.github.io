@@ -304,7 +304,7 @@ const normUser = u => String(u || "").trim().toLowerCase().replace(/[.\s-]/g, ""
 const vehDeDb = r => ({ patente: r.patente, interno: r.interno || "", marca: r.marca || "", modelo: r.modelo || "", anio: r.anio, faena: r.faena || "",
   kmActual: r.km_actual, kmUltimaMant: r.km_ultima_mant, intervaloKm: r.intervalo_km || 10000, venceRevTec: r.vence_rev_tec, venceExtintor: r.vence_extintor, vencePermiso: r.vence_permiso, kmProxMant: r.km_prox_mant, revisar: !!r.revisar });
 const vehADb = v => ({ patente: normPat(v.patente), interno: v.interno || "", marca: v.marca || "", modelo: v.modelo || "", anio: v.anio || null, faena: v.faena || "",
-  km_actual: v.kmActual ?? null, km_ultima_mant: v.kmUltimaMant ?? null, intervalo_km: v.intervaloKm || 10000, revisar: false, vence_rev_tec: v.venceRevTec || null, vence_permiso: v.vencePermiso || null,
+  km_actual: v.kmActual ?? null, km_prox_mant: v.kmProxMant ?? null, intervalo_km: v.intervaloKm || 10000, revisar: false, vence_rev_tec: v.venceRevTec || null, vence_permiso: v.vencePermiso || null,
   vence_extintor: v.venceExtintor || null, actualizado: new Date().toISOString() });
 const usuDeDb = u => ({ usuario: u.usuario, nombre: u.nombre, sap: u.sap || "", rut: u.rut || "", email: u.email || "", rol: u.rol, activo: u.activo, ultimo: u.ultimo_ingreso || "" });
 // Se entra con el correo; los usuarios antiguos sin correo siguen entrando con su nombre de usuario
@@ -484,10 +484,8 @@ function estadoVehiculo(v, regsPorPat) {
   res.ext = fechaEst(dias(extF), "Extintor"); res.extFecha = extF;
 
   const intervalo = +v.intervaloKm || 10000;
-  // Próxima mantención: datos del vehículo; si no hay, el "KM Mant." que anotó el conductor.
-  const proxV = (v.kmUltimaMant == null || v.kmUltimaMant === "") ? null : +v.kmUltimaMant + intervalo;
-  const proxC = ult && +ult.kmMant > 0 ? +ult.kmMant : +v.kmProxMant > 0 ? +v.kmProxMant : null;
-  const proxKm = proxV ?? proxC;
+  // Próxima mantención: un solo dato (el del adhesivo). Lo actualiza el último check o el administrador, el más reciente.
+  const proxKm = +v.kmProxMant > 0 ? +v.kmProxMant : ult && +ult.kmMant > 0 ? +ult.kmMant : null;
   if (proxKm == null) {
     res.mant = { cls: "none", txt: "Sin dato", n: 0, rest: null, pct: 0 };
   } else {
@@ -595,8 +593,8 @@ function renderCheck() {
   if (v && d._precarga !== v.patente) {
     d._precarga = v.patente;
     d.revTecVence = v.venceRevTec || ""; d.permisoVence = v.vencePermiso || ""; d.extintorVence = v.venceExtintor || "";
-    // Próxima mantención: la registrada por el administrador; si no hay, la última que anotó un conductor
-    const prox = v.kmUltimaMant != null && v.kmUltimaMant !== "" ? +v.kmUltimaMant + (+v.intervaloKm || 10000) : +v.kmProxMant || "";
+    // Próxima mantención: el último dato registrado (check o administrador)
+    const prox = +v.kmProxMant || "";
     d.kmMant = prox ? String(prox) : "";
   }
   const opts = tipo => tipo === "req" ? [["ok","Bueno"],["malo","Malo"],["falta","Falta"]] : [["ok","Bueno"],["malo","Malo"],["na","N/A"]];
@@ -1156,8 +1154,8 @@ async function exportarExcel() {
 
 // ---------- Vista admin: Vehículos ----------
 const VCAMPOS = [["patente","Patente","text","ABCD12"],["interno","N° interno","text","Ej: C-15"],["marca","Marca","text","Toyota"],["modelo","Modelo","text","Hilux 4x4"],["anio","Año","number",""],
-  ["faena","Faena / área","text","Ej: Centinela"],["kmActual","Km actual","number",""],["kmUltimaMant","Km última mantención","number",""],
-  ["intervaloKm","Intervalo mantención (km)","number","10000"],["venceRevTec","Vence revisión técnica","date",""],["vencePermiso","Vence permiso de circulación","date",""],["venceExtintor","Vence extintor","date",""]];
+  ["faena","Faena / área","text","Ej: Centinela"],["kmActual","Km actual","number",""],["kmProxMant","KM próxima mantención","number","Según adhesivo"],
+  ["venceRevTec","Vence revisión técnica","date",""],["vencePermiso","Vence permiso de circulación","date",""],["venceExtintor","Vence extintor","date",""]];
 function renderVehiculos() {
   const vehs = Object.values(S.flota).sort((a, b) => a.patente.localeCompare(b.patente));
   const e = S.editVeh ? S.flota[S.editVeh] || {} : {};
@@ -1171,16 +1169,16 @@ function renderVehiculos() {
   <div class="view" style="gap:14px">
     <div class="panel"><div class="panel-h"><h2>${S.editVeh ? "Editar " + esc(showPat(S.editVeh)) : "Agregar camioneta"}</h2>${S.editVeh ? `<button class="btn ghost small" data-act="nuevo-veh">Nueva</button>` : ""}</div>
       <form id="vehForm" class="grid-form" novalidate>
-        ${VCAMPOS.map(([k, l, t, ph]) => `<label class="f">${l}<input id="v-${k}" type="${t}" ${t === "number" ? 'inputmode="numeric" min="0"' : ""} placeholder="${esc(ph)}" value="${esc(e[k] ?? (k === "intervaloKm" && !S.editVeh ? "10000" : ""))}" ${k === "patente" && S.editVeh ? "readonly" : ""}></label>`).join("")}
+        ${VCAMPOS.map(([k, l, t, ph]) => `<label class="f">${l}<input id="v-${k}" type="${t}" ${t === "number" ? 'inputmode="numeric" min="0"' : ""} placeholder="${esc(ph)}" value="${esc(e[k] ?? "")}" ${k === "patente" && S.editVeh ? "readonly" : ""}></label>`).join("")}
         <div id="vehErr" style="grid-column:1/-1"></div>
         <div class="form-foot" style="grid-column:1/-1;margin:0">
           ${S.editVeh ? `<button type="button" class="btn danger" data-act="borrar-veh" data-pat="${esc(S.editVeh)}">${S.confirmDel === S.editVeh ? "Confirmar: eliminar" : "Eliminar"}</button>` : ""}
           <button class="btn primary" type="submit">${S.editVeh ? "Guardar cambios" : "Agregar a la flota"}</button></div>
       </form>
-      <p class="small muted" style="margin:10px 0 0">Al registrar una mantención, actualiza "Km última mantención" con el kilometraje en que se hizo.</p>
+      <p class="small muted" style="margin:10px 0 0">"KM próxima mantención" es el del adhesivo. Los conductores lo confirman o corrigen en cada check; si lo cambias aquí, el próximo check parte con tu valor.</p>
     </div>
     <div class="panel"><div class="panel-h"><h2>Carga masiva</h2></div>
-      <p class="small muted" style="margin-top:0">Pega una fila por camioneta, separada por punto y coma o tabulación (puedes copiar desde Excel):<br><code>patente; marca; modelo; faena; km actual; km última mantención; vence rev. técnica (AAAA-MM-DD); vence extintor (AAAA-MM-DD); n° interno; vence permiso circulación (AAAA-MM-DD)</code></p>
+      <p class="small muted" style="margin-top:0">Pega una fila por camioneta, separada por punto y coma o tabulación (puedes copiar desde Excel):<br><code>patente; marca; modelo; faena; km actual; km próxima mantención; vence rev. técnica (AAAA-MM-DD); vence extintor (AAAA-MM-DD); n° interno; vence permiso circulación (AAAA-MM-DD)</code></p>
       <label class="f">Lista<textarea id="bulk" rows="5" placeholder="ABCD12; Toyota; Hilux; Centinela; 84250; 80000; 2027-03-31; 2027-01-15"></textarea></label>
       <div id="bulkMsg"></div>
       <div class="form-foot"><button class="btn" data-act="bulk">Importar</button></div>
@@ -1195,7 +1193,7 @@ async function guardarVeh() {
   if (!S.editVeh && S.flota[pat]) return err("Esa patente ya está en la flota. Usa Editar para cambiarla.");
   const num = k => g(k) === "" ? null : Math.round(+g(k));
   const doc = { patente: pat, interno: g("interno"), marca: g("marca"), modelo: g("modelo"), anio: num("anio"), faena: g("faena"), kmActual: num("kmActual"),
-    kmUltimaMant: num("kmUltimaMant"), intervaloKm: num("intervaloKm") || 10000, venceRevTec: g("venceRevTec") || null, vencePermiso: g("vencePermiso") || null, venceExtintor: g("venceExtintor") || null };
+    kmProxMant: num("kmProxMant"), intervaloKm: (S.editVeh && S.flota[pat] && S.flota[pat].intervaloKm) || 10000, venceRevTec: g("venceRevTec") || null, vencePermiso: g("vencePermiso") || null, venceExtintor: g("venceExtintor") || null };
   const btn = $("#vehForm button[type=submit]"); btn.disabled = true;
   try { S.flota = await api("guardarVehiculo", doc, !S.editVeh); toast(S.editVeh ? "Cambios guardados" : `${showPat(pat)} agregada a la flota`); S.editVeh = null; render(); }
   catch (e) { btn.disabled = false; err(`No se pudo guardar: ${e.message}`); }
@@ -1212,7 +1210,7 @@ async function importar() {
     if (pat.length < 5 || /^PATENTE/.test(pat)) { if (!/^PATENTE/.test(pat)) bad.push(line); continue; }
     const prev = S.flota[pat] || {};
     const doc = { ...prev, patente: pat, marca: c[1] || prev.marca || "", modelo: c[2] || prev.modelo || "", faena: c[3] || prev.faena || "",
-      kmActual: n(c[4]) ?? prev.kmActual ?? null, kmUltimaMant: n(c[5]) ?? prev.kmUltimaMant ?? null, intervaloKm: prev.intervaloKm || 10000,
+      kmActual: n(c[4]) ?? prev.kmActual ?? null, kmProxMant: n(c[5]) ?? prev.kmProxMant ?? null, intervaloKm: prev.intervaloKm || 10000,
       venceRevTec: fecha(c[6]) || prev.venceRevTec || null, venceExtintor: fecha(c[7]) || prev.venceExtintor || null, interno: c[8] || prev.interno || "", vencePermiso: fecha(c[9]) || prev.vencePermiso || null, anio: prev.anio ?? null };
     lista.push(doc);
   }
