@@ -241,7 +241,7 @@ a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
 <div id="overlay"></div>
 <div id="toastBox"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="lib/supabase.min.js"></script>
 <script>
 (() => {
 "use strict";
@@ -746,7 +746,7 @@ function cargarJsPDF() {
   if (window.jspdf) return Promise.resolve(window.jspdf);
   return pdfLib ||= new Promise((ok, err) => {
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+    s.src = "lib/jspdf.umd.min.js";
     s.onload = () => ok(window.jspdf); s.onerror = () => { pdfLib = null; err(new Error("No se pudo cargar el generador de PDF")); };
     document.head.appendChild(s);
   });
@@ -1010,7 +1010,7 @@ function cargarExcelJS() {
   if (window.ExcelJS) return Promise.resolve(window.ExcelJS);
   return excelLib ||= new Promise((ok, err) => {
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";
+    s.src = "lib/exceljs.min.js";
     s.onload = () => ok(window.ExcelJS); s.onerror = () => { excelLib = null; err(new Error("No se pudo cargar ExcelJS")); };
     document.head.appendChild(s);
   });

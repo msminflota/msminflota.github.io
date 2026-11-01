@@ -1,13 +1,10 @@
 // Service worker de Flota MSMIN: permite abrir la app y hacer el check sin internet.
 // La página se pide primero a la red (para recibir actualizaciones) y si no hay conexión se usa la copia guardada.
 // Las librerías y fuentes se guardan la primera vez y luego se sirven desde el teléfono.
-const VERSION = "flota-v9";
+const VERSION = "flota-v10";
 const PROPIOS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
-const LIBRERIAS = [
-  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js",
-  "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js",
-  "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
-];
+// Las librerías van dentro del sitio (lib/): algunas redes corporativas bloquean los CDN externos
+const LIBRERIAS = ["./lib/supabase.min.js", "./lib/jspdf.umd.min.js", "./lib/exceljs.min.js"];
 
 self.addEventListener("install", ev => {
   ev.waitUntil(caches.open(VERSION).then(async c => {

@@ -11,6 +11,7 @@ Este repo es PÚBLICO (GitHub Pages): nunca subir claves secretas (service_role,
   Los cambios de SQL o de la función los pega Alonso en Supabase: entrégale el texto y dile dónde pegarlo (ver `supabase/INSTALAR.md`).
 - Roles: conductor (crea y ve sus checks) y administrador (panel, vehículos, usuarios, Excel).
 - `sw.js`: service worker. Subir `VERSION = "flota-vNN"` en cada publicación para que los teléfonos bajen la versión nueva.
+- `lib/`: supabase-js 2.45.4, jsPDF 2.5.1 y ExcelJS 4.4.0 copiados dentro del sitio (las redes de Codelco pueden bloquear CDN externos). No leerlos.
 - `correos/`: plantillas de correo de Supabase Auth (se pegan a mano, ver `correos/COMO-PEGAR.md`).
 
 ## Mapa de index.html (busca por el título, las líneas cambian)
