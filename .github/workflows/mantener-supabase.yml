@@ -17,7 +17,9 @@ jobs:
           ping() {
             codigo=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://$1.supabase.co/rest/v1/$2?select=*&limit=1" -H "apikey: $3")
             echo "$1 ($2): HTTP $codigo"
-            [ "$codigo" = "200" ] || falla=1
+            # 200 = respondió con datos; 401 = respondió pero la tabla pide sesión (igual cuenta como uso).
+            # Solo se marca error si el proyecto no responde (000) o está caído/pausado (5xx).
+            case "$codigo" in 2??|401|403) ;; *) falla=1 ;; esac
           }
           ping atbsumphjckdhygefuld vehiculos  sb_publishable_5L5ArY4PU8-YtPs_9xdDFw_fM4UQH9n   # Flota MSMIN
           ping zqozkzrnaliqahpzoiui cuentas    sb_publishable_TiwV4l3Hvw9_b9gSLiNgrQ_e1265_xB   # Moghart's Project
