@@ -1,0 +1,24 @@
+# Mantiene activos los proyectos de Supabase del plan gratis (se pausan tras 7 días sin uso).
+# Cada 3 días hace una consulta liviana a cada proyecto. Las claves son las públicas (publishable):
+# con RLS activo no devuelven datos, pero la consulta cuenta como actividad.
+name: Mantener Supabase activo
+on:
+  schedule:
+    - cron: "17 12 */3 * *"   # cada 3 días, 09:17 hora de Chile aprox.
+  workflow_dispatch:           # botón "Run workflow" para probarlo a mano
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar proyectos
+        run: |
+          set -u
+          falla=0
+          ping() {
+            codigo=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://$1.supabase.co/rest/v1/$2?select=*&limit=1" -H "apikey: $3")
+            echo "$1 ($2): HTTP $codigo"
+            [ "$codigo" = "200" ] || falla=1
+          }
+          ping atbsumphjckdhygefuld vehiculos  sb_publishable_5L5ArY4PU8-YtPs_9xdDFw_fM4UQH9n   # Flota MSMIN
+          ping zqozkzrnaliqahpzoiui cuentas    sb_publishable_TiwV4l3Hvw9_b9gSLiNgrQ_e1265_xB   # Moghart's Project
+          exit $falla
